@@ -39,14 +39,19 @@ def test_read_api_key(mocker):
     assert api_key == 'test_api_key'
 
 def test_recommend_success(client, mocker):
-    mocker.patch('requests.post').return_value.json.return_value = {
+    # Створення макету відповіді, яка буде серіалізована у JSON
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = {
         'choices': [{
             'message': {
                 'content': 'Recommended meal plan'
             }
         }]
     }
-    mocker.patch('requests.post').return_value.status_code = 200
+    mock_response.status_code = 200
+
+    # Патчинг requests.post, щоб повертати mock_response
+    mocker.patch('requests.post', return_value=mock_response)
 
     data = {
         'meat': 'yes',
@@ -61,6 +66,7 @@ def test_recommend_success(client, mocker):
     response = client.post('/recommend', json=data)
     assert response.status_code == 200
     assert b'Recommended meal plan' in response.data
+
 
 def test_recommend_failure(client, mocker):
     mocker.patch('requests.post').return_value.status_code = 500
@@ -78,4 +84,4 @@ def test_recommend_failure(client, mocker):
     
     response = client.post('/recommend', json=data)
     assert response.status_code == 500
-    assert 'Не вдалося отримати рекомендацію' in response.text
+    assert 'Не вдалося отримати рекомендацію' in response.json.get('error')
